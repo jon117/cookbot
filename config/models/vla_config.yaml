@@ -1,0 +1,74 @@
+vla_models:
+  primary_model:
+    name: "openvla-7b"
+    endpoint: "http://localhost:8002/v1/completions"
+    api_key: "${VLA_API_KEY}"
+    image_size: [224, 224]
+    max_tokens: 512
+    temperature: 0.1
+    timeout: 30
+    max_retries: 3
+    
+  fallback_model:
+    name: "rt-2-base"
+    endpoint: "http://localhost:8003/v1/predict"
+    api_key: "${RT2_API_KEY}"
+    image_size: [256, 256]
+    max_tokens: 256
+    temperature: 0.05
+
+# Workspace configuration
+workspace_bounds:
+  x_min: -0.5
+  x_max: 0.5
+  y_min: -0.5
+  y_max: 0.5
+  z_min: 0.0
+  z_max: 0.8
+
+# Camera configuration
+camera:
+  default_intrinsics: [600.0, 600.0, 320.0, 240.0]  # fx, fy, cx, cy
+  image_width: 640
+  image_height: 480
+  depth_scale: 0.001  # Depth units to meters conversion
+
+# Gripper configuration
+gripper:
+  max_width: 0.1
+  min_width: 0.0
+  default_width: 0.05
+  grasp_force: 10.0  # Newtons
+
+# Quality thresholds
+min_confidence: 0.3
+min_grasp_quality: 0.5
+
+# Processing configuration
+preprocessing:
+  image_normalization: true
+  depth_filtering: true
+  background_subtraction: false
+
+# Safety parameters
+safety:
+  max_approach_speed: 0.1  # m/s
+  collision_threshold: 5.0  # Newtons
+  emergency_stop_distance: 0.02  # meters
+
+# Object-specific configurations
+object_configs:
+  carrot:
+    preferred_grasp_width: 0.04
+    approach_offset: 0.1  # meters above object
+    confidence_boost: 0.1
+    
+  apple:
+    preferred_grasp_width: 0.06
+    approach_offset: 0.08
+    confidence_boost: 0.0
+    
+  default:
+    preferred_grasp_width: 0.05
+    approach_offset: 0.1
+    confidence_boost: 0.0

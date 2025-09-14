@@ -1,0 +1,178 @@
+robot:
+  name: "fr5_left_arm"
+  urdf_package: "fr5_description"
+  urdf_file: "fr5.urdf.xacro"
+  description: "FAIR FR5 Left Arm - 6 DOF Industrial Robot"
+  
+  # Robot specifications
+  max_payload: 5.0  # kg
+  max_reach: 0.85   # meters
+  repeatability: 0.1  # mm
+
+# Joint limits in degrees
+joint_limits:
+  joint1: [-165, 165]  # Base rotation
+  joint2: [-135, 135]  # Shoulder
+  joint3: [-135, 135]  # Elbow  
+  joint4: [-180, 180]  # Wrist 1
+  joint5: [-180, 180]  # Wrist 2
+  joint6: [-180, 180]  # Wrist 3 (tool)
+
+# Joint velocity limits (deg/s)
+velocity_limits:
+  joint1: 180
+  joint2: 180
+  joint3: 180
+  joint4: 350
+  joint5: 350
+  joint6: 350
+
+# Joint acceleration limits (deg/s²)
+acceleration_limits:
+  joint1: 300
+  joint2: 300
+  joint3: 300
+  joint4: 500
+  joint5: 500
+  joint6: 500
+
+# Planning configuration
+planning:
+  group_name: "fr5_arm"
+  planner: "RRTstar"  # Options: RRT, RRTstar, PRM, CHOMP, OMPL
+  planning_time: 5.0
+  planning_attempts: 5
+  max_velocity_scaling: 0.5
+  max_acceleration_scaling: 0.5
+  
+  # Planning algorithms configuration
+  algorithms:
+    rrt:
+      range: 0.1
+      goal_bias: 0.05
+    rrtstar:
+      range: 0.1
+      goal_bias: 0.05
+      rewire_factor: 1.1
+    prm:
+      max_nearest_neighbors: 10
+      connection_range: 0.1
+
+# Workspace bounds (meters)
+workspace_bounds:
+  x_min: -0.5
+  x_max: 0.8
+  y_min: -0.6
+  y_max: 0.6
+  z_min: 0.0
+  z_max: 1.0
+
+# End-effector configuration
+end_effector:
+  name: "gripper"
+  frame: "tool0"
+  max_width: 0.1  # meters
+  min_width: 0.0
+  max_force: 100  # Newtons
+  
+  # Tool center point offset from wrist
+  tcp_offset:
+    x: 0.0
+    y: 0.0
+    z: 0.15  # 15cm gripper length
+
+# Safety configuration  
+safety:
+  collision_checking: true
+  self_collision_checking: true
+  max_cartesian_speed: 0.5  # m/s
+  max_joint_speed_factor: 0.8
+  
+  # Force/torque limits
+  force_limits:
+    fx: 50  # Newtons
+    fy: 50
+    fz: 100
+    tx: 10  # Newton-meters
+    ty: 10
+    tz: 5
+  
+  # Emergency stop configuration
+  emergency_stop:
+    deceleration: 5.0  # m/s²
+    stop_time: 0.5     # seconds
+
+# Calibration parameters
+calibration:
+  # Joint offset calibration
+  joint_offsets: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+  
+  # Tool calibration
+  tool_calibration:
+    last_updated: "2024-01-15"
+    accuracy: 0.1  # mm
+    
+  # Base frame calibration
+  base_frame:
+    x: 0.0
+    y: 0.0
+    z: 0.0
+    rx: 0.0
+    ry: 0.0
+    rz: 0.0
+
+# Controller configuration
+controller:
+  type: "position_controller"
+  update_rate: 125  # Hz
+  
+  # PID gains for position control
+  position_gains:
+    kp: [100, 100, 100, 50, 50, 25]
+    ki: [0.1, 0.1, 0.1, 0.05, 0.05, 0.025]
+    kd: [10, 10, 10, 5, 5, 2.5]
+  
+  # Trajectory following tolerances
+  trajectory_tolerance:
+    position: 0.01  # meters
+    velocity: 0.1   # m/s
+    acceleration: 1.0  # m/s²
+
+# Kinematics configuration
+kinematics:
+  solver: "kdl"  # Options: kdl, trac_ik, bio_ik
+  timeout: 0.05  # seconds
+  epsilon: 1e-5
+  
+  # DH parameters (for analytical IK if available)
+  dh_parameters:
+    - {a: 0.0, d: 0.159, alpha: 0.0, theta: 0.0}      # Joint 1
+    - {a: 0.0, d: 0.0, alpha: -90.0, theta: -90.0}    # Joint 2  
+    - {a: 0.425, d: 0.0, alpha: 0.0, theta: 0.0}      # Joint 3
+    - {a: 0.392, d: 0.133, alpha: 0.0, theta: 0.0}    # Joint 4
+    - {a: 0.0, d: 0.997, alpha: -90.0, theta: 0.0}    # Joint 5
+    - {a: 0.0, d: 0.996, alpha: 90.0, theta: 0.0}     # Joint 6
+
+# Collision objects in planning scene
+collision_objects:
+  table:
+    type: "box"
+    dimensions: [1.2, 0.8, 0.02]  # length, width, height
+    pose:
+      x: 0.4
+      y: 0.0
+      z: -0.01
+      rx: 0.0
+      ry: 0.0
+      rz: 0.0
+      
+  slicer:
+    type: "box"
+    dimensions: [0.3, 0.2, 0.15]
+    pose:
+      x: 0.5
+      y: 0.3
+      z: 0.075
+      rx: 0.0
+      ry: 0.0
+      rz: 0.0
