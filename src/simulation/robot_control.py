@@ -48,12 +48,16 @@ class SimulatedRobotArm:
             logger.info("Setting up simulated robot arm...")
             
             # For now, use placeholder robot (simple kinematic chain)
+            logger.debug("About to create simple robot...")
             self._create_simple_robot()
+            logger.debug("Simple robot created successfully")
             
             logger.info("✓ Robot arm setup complete")
             
         except Exception as e:
             logger.error(f"Failed to setup robot: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             raise
     
     def _create_simple_robot(self):
@@ -66,7 +70,7 @@ class SimulatedRobotArm:
             prim_path=f"{self.robot_prim_path}/Base",
             name="robot_base",
             position=np.array([0.0, 0.0, 0.1]),
-            size=np.array([0.2, 0.2, 0.2]),
+            scale=np.array([0.2, 0.2, 0.2]),  # [x, y, z] scale factors
             color=np.array([0.3, 0.3, 0.8]),
             mass=5.0
         )
@@ -79,7 +83,7 @@ class SimulatedRobotArm:
             prim_path=f"{self.robot_prim_path}/Link1",
             name="link1",
             position=np.array([0.0, 0.0, 0.25]),
-            size=np.array([0.05, 0.05, 0.2]),
+            scale=np.array([0.05, 0.05, 0.2]),
             color=np.array([0.4, 0.4, 0.9]),
             mass=1.0
         )
@@ -90,7 +94,7 @@ class SimulatedRobotArm:
             prim_path=f"{self.robot_prim_path}/Link2",
             name="link2",
             position=np.array([0.15, 0.0, 0.35]),
-            size=np.array([0.3, 0.05, 0.05]),
+            scale=np.array([0.3, 0.05, 0.05]),
             color=np.array([0.4, 0.4, 0.9]),
             mass=0.8
         )
@@ -101,7 +105,7 @@ class SimulatedRobotArm:
             prim_path=f"{self.robot_prim_path}/EndEffector",
             name="end_effector",
             position=np.array([0.3, 0.0, 0.35]),
-            size=np.array([0.05, 0.05, 0.1]),
+            scale=np.array([0.05, 0.05, 0.1]),
             color=np.array([0.2, 0.8, 0.2]),
             mass=0.2
         )
@@ -153,7 +157,7 @@ class SimulatedRobotArm:
             
             if success:
                 self.current_end_effector_pose = target_pose
-                self.current_joint_positions = joint_angles
+                self.current_joint_positions = np.array(joint_angles)
                 
                 return ExecutionResult(
                     success=True,
@@ -346,7 +350,7 @@ class SimulatedRobotArm:
             
             # In real Isaac Sim, this would send commands to articulation
             # For now, just update current positions
-            self.current_joint_positions = target_angles.copy()
+            self.current_joint_positions = np.array(target_angles).copy()
             
             # Update end effector position based on forward kinematics (simplified)
             self._update_end_effector_pose(target_angles)
@@ -436,6 +440,15 @@ class RobotController:
         current_pose = self.robot_arm.get_current_pose()
         joint_state = self.robot_arm.get_current_joint_state()
         
+        # Debug: Check types
+        logger.debug(f"joint_state type: {type(joint_state)}, value: {joint_state}")
+        
+        # Convert to list safely
+        if hasattr(joint_state, 'tolist'):
+            joint_angles_list = joint_state.tolist()
+        else:
+            joint_angles_list = list(joint_state) if joint_state is not None else []
+        
         return {
             'current_pose': {
                 'x': current_pose.x,
@@ -445,7 +458,7 @@ class RobotController:
                 'ry': current_pose.ry,
                 'rz': current_pose.rz
             },
-            'joint_angles': joint_state.tolist(),
+            'joint_angles': joint_angles_list,
             'gripper_state': self.robot_arm.gripper_state,
             'task_queue_length': len(self.task_queue)
         }

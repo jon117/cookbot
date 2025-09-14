@@ -1,8 +1,6 @@
 #!/bin/bash
-"""
-Start Isaac Sim with Cookbot Integration
-Launches Isaac Sim and provides setup instructions
-"""
+# Start Isaac Sim with Cookbot Integration
+# Launches Isaac Sim and provides setup instructions
 
 set -e
 
@@ -32,15 +30,44 @@ else
 fi
 
 echo ""
-echo "🚀 Starting Isaac Sim with automatic demo execution..."
+echo "🚀 Starting Isaac Sim with demo..."
 echo ""
 
-# Create a temporary startup script that Isaac Sim will run
-TEMP_SCRIPT="/tmp/cookbot_startup.py"
+# Create script in Isaac Sim directory
+ISAAC_SCRIPT="$ISAAC_SIM_PATH/cookbot_demo.py"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-    # Use the minimal working test script
-    cp "$SCRIPT_DIR/test_minimal_isaac.py" "$TEMP_SCRIPT"
+# Choose demo script based on argument
+DEMO_TYPE="${1:-vla}"
+case "$DEMO_TYPE" in
+    "vla")
+        echo "🧠 Running Isaac Sim + VLA integration demo..."
+        cp "$SCRIPT_DIR/run_isaac_vla_demo.py" "$ISAAC_SCRIPT"
+        ;;
+    "standalone")
+        echo "� Running standalone OpenVLA test (no Isaac Sim)..."
+        cd "$SCRIPT_DIR"
+        python demo.py
+        exit 0
+        ;;
+    *)
+        echo "❌ Unknown demo type: $DEMO_TYPE"
+        echo "Usage: $0 [vla|standalone]"
+        exit 1
+        ;;
+esac
 
-# Start Isaac Sim with the startup script
-"$ISAAC_SIM_PATH/isaac-sim.sh" --exec "$TEMP_SCRIPT"
+# Use Isaac Sim's Python environment instead of --exec
+cd "$ISAAC_SIM_PATH"
+echo "🔧 Using Isaac Sim's Python environment..."
+./python.sh "$ISAAC_SCRIPT"
+
+# Cleanup
+rm -f "$ISAAC_SCRIPT"
+
+echo ""
+echo "✅ Demo completed!"
+echo ""
+echo "💡 Usage examples:"
+echo "  ./scripts/start_isaac_sim.sh vla         # Isaac Sim + VLA integration demo"
+echo "  ./scripts/start_isaac_sim.sh standalone  # Test OpenVLA without Isaac Sim"

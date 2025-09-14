@@ -11,19 +11,16 @@ Building an integrated kitchen ecosystem that can autonomously prepare meals thr
 
 ## 🚀 Quick Start
 
-### Option 1: Test Integration (No Isaac Sim Required)
+### Option 1: Standalone OpenVLA Test
 ```bash
-# Test the complete OpenVLA pipeline
-python scripts/demo.py
+# Test OpenVLA pipeline without Isaac Sim
+./scripts/start_isaac_sim.sh standalone
 ```
 
-### Option 2: Full Isaac Sim Demo
+### Option 2: Full Isaac Sim + VLA Demo
 ```bash
-# Start Isaac Sim with cookbot integration
-./scripts/start_isaac_sim.sh
-
-# Then in Isaac Sim Python console:
-exec(open('scripts/run_isaac_vla_demo.py').read())
+# Run complete Isaac Sim + VLA integration
+./scripts/start_isaac_sim.sh vla
 ```
 
 ### Prerequisites
@@ -64,31 +61,26 @@ Control Layer (Traditional) → Precise motion execution
 - 🔄 Recipe planning integration
 - 🔄 Real robot hardware deployment
 
-## 🚨 TODO - Isaac Sim 5.0 Crash Investigation
+## ✅ SOLVED - Isaac Sim 5.0 Integration
 
-**CRITICAL ISSUE**: Isaac Sim 5.0 experiencing severe segmentation faults (exit code 139)
+**SOLUTION FOUND**: Use Isaac Sim's own Python environment with `python.sh` instead of `--exec`
 
-**Findings from Sept 14, 2025 debugging session:**
-- Isaac Sim 5.0 appears much more sensitive than previous versions
-- Minimal script (`test_minimal_isaac.py`) worked ONCE successfully
-- Immediate exit approach causes system crashes requiring terminal kill
-- NOT related to OpenVLA GPU memory usage (Isaac Sim only used 2GB VRAM before)
-- Environment variables properly configured (ISAAC_PATH, CARB_APP_PATH, EXP_PATH)
-- Import order conflicts suspected but not fully resolved
+**Root Cause**: Isaac Sim 5.0 requires its own Python environment and module loading order
+- System Python with `--exec` flag causes segmentation faults (exit code 139)
+- Isaac Sim's `python.sh` provides the correct environment and prevents crashes
 
-**Scripts cleaned up:**
-- ✅ Removed problematic `test_immediate_exit.py`
-- ✅ Kept working `test_minimal_isaac.py` 
-- ✅ Updated `start_isaac_sim.sh` to use minimal script
+**Working approach:**
+```bash
+# Copy script to Isaac Sim directory
+ISAAC_SCRIPT="$ISAAC_SIM_PATH/cookbot_demo.py"
+cp "$SCRIPT_DIR/test_minimal_isaac.py" "$ISAAC_SCRIPT"
 
-**Next investigation steps:**
-1. Try Isaac Sim 4.x compatibility mode
-2. Investigate system-level conflicts (not GPU memory)
-3. Test with completely fresh Python environment
-4. Consider Docker isolation for Isaac Sim
-5. Check Isaac Sim 5.0 known issues/forums
+# Use Isaac Sim's Python environment
+cd "$ISAAC_SIM_PATH"
+./python.sh "$ISAAC_SCRIPT"
+```
 
-**Status**: Blocking Phase 2 - needs resolution before proceeding
+**Status**: ✅ **RESOLVED** - Ready for Phase 2 development
 
 ## �📚 Documentation
 

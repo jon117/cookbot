@@ -13,6 +13,10 @@ from pathlib import Path
 
 # Add project root to Python path
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+# Handle the case where this script is copied to Isaac Sim directory
+if not os.path.exists(os.path.join(project_root, 'src')):
+    # We're probably running from Isaac Sim directory, use absolute path
+    project_root = "/home/jon/projects/cookbot"
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 

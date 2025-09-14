@@ -84,7 +84,7 @@ class KitchenScene:
             name="table",
             position=np.array([0.5, 0.0, -0.05]),  # Table surface at z=0
             orientation=np.array([1.0, 0.0, 0.0, 0.0]),  # No rotation
-            size=np.array([1.2, 0.8, 0.1]),  # length, width, height
+            scale=np.array([1.2, 0.8, 0.1]),  # length, width, height
             color=np.array([0.8, 0.6, 0.4])  # Wood color
         )
         self.world.scene.add(table)
@@ -97,7 +97,7 @@ class KitchenScene:
             name="carrot",
             position=np.array([0.3, 0.1, 0.1]),  # On table surface
             orientation=np.array([1.0, 0.0, 0.0, 0.0]),
-            size=np.array([0.15, 0.03, 0.03]),  # Carrot-like dimensions
+            scale=np.array([0.15, 0.03, 0.03]),  # Carrot-like dimensions
             color=np.array([1.0, 0.5, 0.0]),  # Orange color
             mass=0.1  # Light object
         )
@@ -110,7 +110,7 @@ class KitchenScene:
             name="slicer",
             position=np.array([0.6, 0.3, 0.1]),
             orientation=np.array([1.0, 0.0, 0.0, 0.0]),
-            size=np.array([0.25, 0.2, 0.2]),
+            scale=np.array([0.25, 0.2, 0.2]),
             color=np.array([0.7, 0.7, 0.7])  # Metallic gray
         )
         self.world.scene.add(slicer_base)
@@ -121,7 +121,7 @@ class KitchenScene:
             name="slicer_input",
             position=np.array([0.5, 0.3, 0.05]),
             orientation=np.array([1.0, 0.0, 0.0, 0.0]),
-            size=np.array([0.1, 0.15, 0.02]),
+            scale=np.array([0.1, 0.15, 0.02]),
             color=np.array([0.9, 0.9, 0.9])  # Light gray input area
         )
         self.world.scene.add(slicer_input)
@@ -134,7 +134,7 @@ class KitchenScene:
             name="robot_base",
             position=np.array([0.0, 0.0, 0.1]),
             orientation=np.array([1.0, 0.0, 0.0, 0.0]),
-            size=np.array([0.2, 0.2, 0.2]),
+            scale=np.array([0.2, 0.2, 0.2]),
             color=np.array([0.3, 0.3, 0.8])  # Blue robot color
         )
         self.world.scene.add(robot_base)
@@ -145,7 +145,7 @@ class KitchenScene:
             name="robot_arm1",
             position=np.array([0.15, 0.0, 0.25]),
             orientation=np.array([1.0, 0.0, 0.0, 0.0]),
-            size=np.array([0.3, 0.05, 0.05]),
+            scale=np.array([0.3, 0.05, 0.05]),
             color=np.array([0.4, 0.4, 0.9]),
             mass=0.5
         )
@@ -157,7 +157,7 @@ class KitchenScene:
             name="end_effector",
             position=np.array([0.3, 0.0, 0.25]),
             orientation=np.array([1.0, 0.0, 0.0, 0.0]),
-            size=np.array([0.05, 0.05, 0.08]),
+            scale=np.array([0.05, 0.05, 0.08]),
             color=np.array([0.2, 0.8, 0.2]),  # Green gripper
             mass=0.1
         )
@@ -165,8 +165,7 @@ class KitchenScene:
         
     def _setup_lighting(self):
         """Set up scene lighting."""
-        # Create dome light for even illumination
-        stage_utils.create_new_stage()
+        # Create dome light for even illumination (don't create new stage!)
         prim_utils.create_prim(
             "/World/DomeLight",
             "DomeLight",
