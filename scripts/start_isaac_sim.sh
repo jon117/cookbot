@@ -17,6 +17,11 @@ if [ ! -d "$ISAAC_SIM_PATH" ]; then
     exit 1
 fi
 
+# Set up Isaac Sim environment variables
+export ISAAC_PATH="$ISAAC_SIM_PATH"
+export CARB_APP_PATH="$ISAAC_SIM_PATH/kit"
+export EXP_PATH="$ISAAC_SIM_PATH"
+
 # Check OpenVLA server
 echo "🔍 Checking OpenVLA server..."
 if curl -s http://0.0.0.0:8000/act > /dev/null 2>&1; then
@@ -27,11 +32,15 @@ else
 fi
 
 echo ""
-echo "🚀 Starting Isaac Sim..."
-echo ""
-echo "After Isaac Sim loads, run in the Python console:"
-echo "  exec(open('scripts/run_isaac_vla_demo.py').read())"
+echo "🚀 Starting Isaac Sim with automatic demo execution..."
 echo ""
 
-# Start Isaac Sim
-"$ISAAC_SIM_PATH/isaac-sim.sh"
+# Create a temporary startup script that Isaac Sim will run
+TEMP_SCRIPT="/tmp/cookbot_startup.py"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+    # Use the minimal working test script
+    cp "$SCRIPT_DIR/test_minimal_isaac.py" "$TEMP_SCRIPT"
+
+# Start Isaac Sim with the startup script
+"$ISAAC_SIM_PATH/isaac-sim.sh" --exec "$TEMP_SCRIPT"

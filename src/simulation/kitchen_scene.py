@@ -3,7 +3,29 @@ Isaac Sim Kitchen Scene Setup
 Creates a kitchen environment with robot arm, table, and objects for VLA testing.
 """
 
-import numpy as np
+import os
+import sys
+
+# Set EXP_PATH to a default value if not set
+# This is required by Isaac Sim's SimulationApp
+if "EXP_PATH" not in os.environ:
+    isaac_sim_path = os.path.expanduser("~/isaacsim")
+    default_exp_path = os.path.join(isaac_sim_path, "apps")
+    os.environ["EXP_PATH"] = default_exp_path
+    print(f"EXP_PATH not set, defaulting to: {default_exp_path}")
+
+# Set CARB_APP_PATH if not set
+if "CARB_APP_PATH" not in os.environ:
+    isaac_sim_path = os.path.expanduser("~/isaacsim")
+    os.environ["CARB_APP_PATH"] = isaac_sim_path
+    print(f"CARB_APP_PATH not set, defaulting to: {isaac_sim_path}")
+
+# Set ISAAC_PATH if not set
+if "ISAAC_PATH" not in os.environ:
+    isaac_sim_path = os.path.expanduser("~/isaacsim")
+    os.environ["ISAAC_PATH"] = isaac_sim_path
+    print(f"ISAAC_PATH not set, defaulting to: {isaac_sim_path}")
+
 from omni.isaac.kit import SimulationApp
 
 # Start Isaac Sim with essential extensions
@@ -17,6 +39,7 @@ config = {
 
 simulation_app = SimulationApp(config)
 
+import numpy as np
 import omni
 import omni.isaac.core.utils.prims as prim_utils
 import omni.isaac.core.utils.stage as stage_utils

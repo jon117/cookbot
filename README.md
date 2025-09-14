@@ -64,6 +64,32 @@ Control Layer (Traditional) → Precise motion execution
 - 🔄 Recipe planning integration
 - 🔄 Real robot hardware deployment
 
+## 🚨 TODO - Isaac Sim 5.0 Crash Investigation
+
+**CRITICAL ISSUE**: Isaac Sim 5.0 experiencing severe segmentation faults (exit code 139)
+
+**Findings from Sept 14, 2025 debugging session:**
+- Isaac Sim 5.0 appears much more sensitive than previous versions
+- Minimal script (`test_minimal_isaac.py`) worked ONCE successfully
+- Immediate exit approach causes system crashes requiring terminal kill
+- NOT related to OpenVLA GPU memory usage (Isaac Sim only used 2GB VRAM before)
+- Environment variables properly configured (ISAAC_PATH, CARB_APP_PATH, EXP_PATH)
+- Import order conflicts suspected but not fully resolved
+
+**Scripts cleaned up:**
+- ✅ Removed problematic `test_immediate_exit.py`
+- ✅ Kept working `test_minimal_isaac.py` 
+- ✅ Updated `start_isaac_sim.sh` to use minimal script
+
+**Next investigation steps:**
+1. Try Isaac Sim 4.x compatibility mode
+2. Investigate system-level conflicts (not GPU memory)
+3. Test with completely fresh Python environment
+4. Consider Docker isolation for Isaac Sim
+5. Check Isaac Sim 5.0 known issues/forums
+
+**Status**: Blocking Phase 2 - needs resolution before proceeding
+
 ## �📚 Documentation
 
 - [Architecture Overview](docs/architecture/overview.md)

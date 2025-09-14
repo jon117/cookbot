@@ -11,6 +11,16 @@ import time
 import os
 from pathlib import Path
 
+# Add project root to Python path
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+# Add src directory to Python path
+src_path = os.path.join(project_root, 'src')
+if src_path not in sys.path:
+    sys.path.insert(0, src_path)
+
 # Setup Isaac Sim environment if available
 isaac_sim_path = Path.home() / "isaacsim"
 if isaac_sim_path.exists():
@@ -24,11 +34,8 @@ if isaac_sim_path.exists():
         if path.exists():
             sys.path.insert(0, str(path))
 
-# Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
-from simulation.isaac_vla_bridge import IsaacVLABridge
-from simulation.robot_control import RobotController
+from src.simulation.isaac_vla_bridge import IsaacVLABridge
+from src.simulation.robot_control import RobotController
 from common.data_types import GraspPose
 
 logger = logging.getLogger(__name__)
