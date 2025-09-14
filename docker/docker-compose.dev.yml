@@ -1,0 +1,44 @@
+version: '3.8'
+
+services:
+  ai-inference:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.ai-inference
+    ports:
+      - "8001:8001"  # LLM endpoint
+      - "8002:8002"  # VLA endpoint
+    volumes:
+      - ../data/models:/app/models
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+  isaac-sim:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.isaac-sim
+    volumes:
+      - ../src:/app/src
+      - ../config:/app/config
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    environment:
+      - DISPLAY=${DISPLAY}
+    network_mode: host
+
+  ros2-bridge:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.dev
+    volumes:
+      - ../ros2_ws:/app/ros2_ws
+      - ../src:/app/src
+    network_mode: host
+    depends_on:
+      - ai-inference

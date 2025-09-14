@@ -1,0 +1,42 @@
+# Development Environment Configuration
+environment: development
+debug: true
+log_level: DEBUG
+
+# AI Model Configuration
+models:
+  llm:
+    provider: "qwen"
+    model: "qwen-2.5-7b-instruct"
+    endpoint: "http://localhost:8001/v1"
+    api_key: "dev-key"
+  
+  vla:
+    provider: "openvla"
+    model: "openvla-7b"
+    endpoint: "http://localhost:8002/v1"
+    api_key: "dev-key"
+
+# Robot Configuration
+robots:
+  left_arm:
+    type: "fr5"
+    urdf_path: "config/robots/fr5_left_arm.yaml"
+  right_arm:
+    type: "fr5"
+    urdf_path: "config/robots/fr5_right_arm.yaml"
+
+# Simulation
+simulation:
+  isaac_sim_path: "/opt/isaac-sim"
+  scene_file: "kitchen_scene.usd"
+  enable_rtx: true
+
+# Appliances
+appliances:
+  slicer:
+    type: "smart_slicer"
+    port: "/dev/ttyUSB0"
+  griddle:
+    type: "griddle"
+    port: "/dev/ttyUSB1"

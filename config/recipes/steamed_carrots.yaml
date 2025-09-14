@@ -1,0 +1,41 @@
+# Steamed Carrots Recipe Configuration
+name: "steamed_carrots"
+description: "Simple steamed carrots preparation"
+difficulty: "beginner"
+estimated_time: "15 minutes"
+
+ingredients:
+  - name: "carrots"
+    quantity: 3
+    unit: "pieces"
+    preparation: "whole"
+
+steps:
+  - id: "pick_carrot"
+    action: "pick_and_place"
+    source: "ingredient_station"
+    target: "slicer_input"
+    object: "carrot"
+    
+  - id: "slice_carrot" 
+    action: "operate_appliance"
+    appliance: "slicer"
+    settings:
+      thickness: "medium"
+      count: "all"
+      
+  - id: "collect_slices"
+    action: "collect"
+    source: "slicer_output"
+    target: "steamer_basket"
+    
+  - id: "steam_carrots"
+    action: "operate_appliance"
+    appliance: "steamer"
+    settings:
+      temperature: "100C"
+      duration: "8 minutes"
+
+expected_output:
+  - description: "Steamed carrot slices"
+    location: "steamer_basket"
