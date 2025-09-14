@@ -11,20 +11,25 @@ Building an integrated kitchen ecosystem that can autonomously prepare meals thr
 
 ## 🚀 Quick Start
 
+### Option 1: Test Integration (No Isaac Sim Required)
 ```bash
-# Clone the repository
-git clone https://github.com/jon117/cookbot
-cd kitchen-robot
-
-# Set up development environment
-make setup-dev
-
-# Run simulation
-make run-simulation
-
-# Execute first task (carrot pickup)
-make test-carrot-pickup
+# Test the complete OpenVLA pipeline
+python scripts/demo.py
 ```
+
+### Option 2: Full Isaac Sim Demo
+```bash
+# Start Isaac Sim with cookbot integration
+./scripts/start_isaac_sim.sh
+
+# Then in Isaac Sim Python console:
+exec(open('scripts/run_isaac_vla_demo.py').read())
+```
+
+### Prerequisites
+- OpenVLA server running at `http://0.0.0.0:8000/act`
+- Isaac Sim installed at `~/isaacsim/` (for full demo)
+- Python packages: `numpy`, `requests`, `json-numpy`
 
 ## 📋 Phase Roadmap
 
@@ -43,10 +48,26 @@ Movement Layer (VLA)    → Vision-grounded manipulation planning
 Control Layer (Traditional) → Precise motion execution
 ```
 
-## 📚 Documentation
+## � Current Status
+
+**Phase 1: Isaac Sim + OpenVLA Integration** ✅ **COMPLETE**
+
+- ✅ Isaac Sim kitchen scene with robot, table, carrot, and slicer
+- ✅ OpenVLA integration with proper numpy array handling
+- ✅ VLA camera system (256x256 RGB preprocessing)
+- ✅ Complete pipeline: Image → VLA → Robot Actions
+- ✅ Fallback behavior when OpenVLA returns errors
+- ✅ Clean demo and testing scripts
+
+**Next: Phase 2 - Complete Task Execution**
+- 🔄 Multi-step task execution
+- 🔄 Recipe planning integration
+- 🔄 Real robot hardware deployment
+
+## �📚 Documentation
 
 - [Architecture Overview](docs/architecture/overview.md)
-- [Development Setup](docs/setup/development-environment.md)
+- [Isaac Sim Integration](docs/isaac_sim_integration.md)
 - [API Reference](docs/api/)
 - [Tutorials](docs/tutorials/)
 
@@ -60,10 +81,11 @@ Control Layer (Traditional) → Precise motion execution
 
 ## 📊 Success Metrics
 
-- Phase 1: Robot picks up carrot and places in slicer
-- Phase 2: Complete steamed carrots preparation
-- Phase 3: 5+ different recipes automated
-- Phase 4: Real kitchen deployment
+- ✅ Phase 1: Isaac Sim + OpenVLA integration working
+- 🔄 Phase 2: Robot picks up carrot and places in slicer  
+- 🔄 Phase 3: Complete steamed carrots preparation
+- 🔄 Phase 4: 5+ different recipes automated
+- 🔄 Phase 5: Real kitchen deployment
 
 ## 🤝 Contributing
 

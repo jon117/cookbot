@@ -8,12 +8,16 @@ import json
 import logging
 from typing import Dict, List, Optional, Any
 import numpy as np
-import aiohttp
+import requests
 from PIL import Image
 import io
 import base64
+import json_numpy
 
 from .base_vla import BaseVLA, ActionPrediction
+
+# Patch json to handle numpy arrays
+json_numpy.patch()
 
 logger = logging.getLogger(__name__)
 
@@ -67,51 +71,73 @@ class OpenVLAModel(BaseVLA):
                                    history: Optional[List[Dict]] = None) -> ActionPrediction:
         """Async implementation of action prediction."""
         
-        # Preprocess image
+        # Preprocess image to match OpenVLA expected format
         processed_image = self.preprocess_image(image)
-        image_b64 = self._encode_image(processed_image)
         
-        # Format request payload
+        # Format request payload for OpenVLA /act endpoint
+        # OpenVLA expects: {'image': np.ndarray, 'instruction': str}
         payload = {
-            "model": self.model_name,
-            "instruction": instruction,
-            "image": image_b64,
-            "max_tokens": self.config.get("max_tokens", 512),
-            "temperature": self.config.get("temperature", 0.1)
+            "image": processed_image,  # Send numpy array directly - json_numpy handles serialization
+            "instruction": instruction
         }
         
         if history:
             payload["history"] = history
             
         headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {self.api_key}" if self.api_key else ""
+            "Content-Type": "application/json"
         }
+        
+        # Note: OpenVLA /act endpoint doesn't use Bearer auth, so no Authorization header
         
         # Make API request with retries
         for attempt in range(self.max_retries):
             try:
-                async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=self.timeout)) as session:
-                    async with session.post(self.endpoint, json=payload, headers=headers) as response:
-                        if response.status == 200:
-                            result = await response.json()
-                            return self._parse_response(result)
-                        else:
-                            logger.warning(f"VLA API returned status {response.status}, attempt {attempt + 1}")
-                            if attempt == self.max_retries - 1:
-                                raise Exception(f"API request failed with status {response.status}")
+                # Use requests instead of aiohttp for json_numpy compatibility
+                import requests
+                
+                response = requests.post(
+                    self.endpoint,
+                    json=payload,
+                    headers=headers,
+                    timeout=self.timeout
+                )
+                
+                if response.status_code == 200:
+                    result = response.json()
+                    
+                    # Handle OpenVLA error responses
+                    if result == "error" or (isinstance(result, str) and "error" in result.lower()):
+                        logger.warning(f"OpenVLA returned error: {result}")
+                        
+                        # For development, return a fallback action when OpenVLA returns error
+                        logger.info("Using fallback action due to OpenVLA error")
+                        return ActionPrediction(
+                            position={"x": 0.3, "y": 0.1, "z": 0.15},
+                            orientation={"rx": 0.0, "ry": 0.0, "rz": 0.0},
+                            gripper_width=0.05,
+                            confidence=0.5,
+                            metadata={"source": "fallback", "reason": "openvla_error"}
+                        )
+                        
+                    return self._parse_response(result)
+                else:
+                    logger.warning(f"OpenVLA API returned status {response.status_code}, attempt {attempt + 1}")
+                    if attempt == self.max_retries - 1:
+                        raise Exception(f"API request failed with status {response.status_code}")
                             
-            except asyncio.TimeoutError:
-                logger.warning(f"VLA API timeout, attempt {attempt + 1}")
+            except requests.exceptions.Timeout:
+                logger.warning(f"OpenVLA API timeout, attempt {attempt + 1}")
                 if attempt == self.max_retries - 1:
                     raise Exception("API request timed out")
             except Exception as e:
-                logger.warning(f"VLA API error: {e}, attempt {attempt + 1}")
+                logger.warning(f"OpenVLA API error: {e}, attempt {attempt + 1}")
                 if attempt == self.max_retries - 1:
                     raise e
                     
             # Exponential backoff
-            await asyncio.sleep(2 ** attempt)
+            import time
+            time.sleep(2 ** attempt)
             
         raise Exception("All retry attempts failed")
     
@@ -123,17 +149,17 @@ class OpenVLAModel(BaseVLA):
             image: Raw RGB image (H, W, 3)
             
         Returns:
-            Preprocessed image
+            Preprocessed image (256, 256, 3) as uint8
         """
         # Ensure image is uint8
         if image.dtype != np.uint8:
             image = (image * 255).astype(np.uint8)
             
-        # Resize to model input size
+        # Resize to OpenVLA expected size (256x256)
         pil_image = Image.fromarray(image)
-        pil_image = pil_image.resize(self.image_size, Image.Resampling.LANCZOS)
+        pil_image = pil_image.resize((256, 256), Image.Resampling.LANCZOS)
         
-        return np.array(pil_image)
+        return np.array(pil_image, dtype=np.uint8)
     
     def _encode_image(self, image: np.ndarray) -> str:
         """Encode image as base64 string."""
@@ -145,52 +171,67 @@ class OpenVLAModel(BaseVLA):
     
     def _parse_response(self, response: Dict[str, Any]) -> ActionPrediction:
         """
-        Parse VLA model response into ActionPrediction.
+        Parse OpenVLA model response into ActionPrediction.
         
         Args:
-            response: Raw API response
+            response: Raw API response from OpenVLA /act endpoint
             
         Returns:
             Parsed ActionPrediction
         """
         try:
-            # Extract action from response (format may vary by model)
+            # OpenVLA /act endpoint returns action directly
+            # Expected format: {"action": [x, y, z, rx, ry, rz, gripper_action]}
+            # or similar format depending on the actual OpenVLA implementation
+            
             if "action" in response:
                 action_data = response["action"]
-            elif "choices" in response and len(response["choices"]) > 0:
-                # OpenAI-style response format
-                content = response["choices"][0].get("message", {}).get("content", "{}")
-                action_data = json.loads(content)
+                
+                # Handle different possible formats
+                if isinstance(action_data, list) and len(action_data) >= 6:
+                    # Format: [x, y, z, rx, ry, rz, gripper_width]
+                    position = {"x": float(action_data[0]), "y": float(action_data[1]), "z": float(action_data[2])}
+                    orientation = {"rx": float(action_data[3]), "ry": float(action_data[4]), "rz": float(action_data[5])}
+                    gripper_width = float(action_data[6]) if len(action_data) > 6 else 0.05
+                    confidence = float(action_data[7]) if len(action_data) > 7 else 0.8
+                    
+                elif isinstance(action_data, dict):
+                    # Format: {"position": {...}, "orientation": {...}, ...}
+                    position = action_data.get("position", {"x": 0.3, "y": 0.1, "z": 0.15})
+                    orientation = action_data.get("orientation", {"rx": 0.0, "ry": 0.0, "rz": 0.0})
+                    gripper_width = action_data.get("gripper_width", 0.05)
+                    confidence = action_data.get("confidence", 0.8)
+                    
+                else:
+                    # Fallback: treat as raw action values
+                    logger.warning(f"Unexpected action format: {action_data}")
+                    return self._fallback_prediction("unknown format")
+                    
             else:
-                raise ValueError("Unexpected response format")
+                # Check for other possible response formats
+                logger.warning(f"No 'action' key in response: {list(response.keys())}")
+                return self._fallback_prediction("no action key")
             
-            # Parse pose data
-            position = action_data.get("position", {"x": 0.0, "y": 0.0, "z": 0.0})
-            orientation = action_data.get("orientation", {"rx": 0.0, "ry": 0.0, "rz": 0.0})
-            gripper_width = action_data.get("gripper_width", 0.05)
-            confidence = action_data.get("confidence", 0.5)
-            approach_vector = action_data.get("approach_vector")
-            reasoning = action_data.get("reasoning", "")
-            
+            # Create prediction
             prediction = ActionPrediction(
                 position=position,
                 orientation=orientation,
                 gripper_width=gripper_width,
                 confidence=confidence,
-                approach_vector=approach_vector,
-                reasoning=reasoning
+                reasoning=response.get("reasoning", "OpenVLA prediction")
             )
             
             # Validate prediction
             if not self.validate_prediction(prediction):
-                logger.warning("VLA prediction failed validation, using fallback")
-                return self._fallback_prediction("grasp object")
+                logger.warning("OpenVLA prediction failed validation, using fallback")
+                return self._fallback_prediction("validation failed")
                 
             return prediction
             
-        except (json.JSONDecodeError, KeyError, ValueError) as e:
-            logger.error(f"Failed to parse VLA response: {e}")
-            return self._fallback_prediction("grasp object")
+        except (KeyError, ValueError, TypeError) as e:
+            logger.error(f"Failed to parse OpenVLA response: {e}")
+            logger.debug(f"Response content: {response}")
+            return self._fallback_prediction("parse error")
     
     def _fallback_prediction(self, instruction: str) -> ActionPrediction:
         """

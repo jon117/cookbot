@@ -28,9 +28,10 @@ robots:
 
 # Simulation
 simulation:
-  isaac_sim_path: "/opt/isaac-sim"
+  isaac_sim_path: "~/isaacsim"
   scene_file: "kitchen_scene.usd"
   enable_rtx: true
+  headless: false
 
 # Appliances
 appliances:

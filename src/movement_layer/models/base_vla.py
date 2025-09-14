@@ -17,6 +17,7 @@ class ActionPrediction:
     confidence: float
     approach_vector: Optional[Dict[str, float]] = None
     reasoning: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 class BaseVLA(ABC):
     """Abstract base for Vision-Language-Action models."""

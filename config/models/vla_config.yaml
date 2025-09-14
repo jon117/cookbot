@@ -1,9 +1,9 @@
 vla_models:
   primary_model:
     name: "openvla-7b"
-    endpoint: "http://localhost:8002/v1/completions"
+    endpoint: "http://0.0.0.0:8000/act"
     api_key: "${VLA_API_KEY}"
-    image_size: [224, 224]
+    image_size: [256, 256]
     max_tokens: 512
     temperature: 0.1
     timeout: 30
