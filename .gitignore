@@ -40,7 +40,6 @@ venv.bak/
 data/logs/
 data/recordings/
 data/calibration/
-data/models/
 !data/samples/  # Keep sample data
 
 # Docker
@@ -53,8 +52,7 @@ ros2_ws/log/
 
 # Isaac Sim
 isaac-sim-cache/
-*.usd
-*.usda
+
 
 # Model files
 *.bin

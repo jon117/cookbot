@@ -16,10 +16,20 @@ from isaacsim.core.api.objects import DynamicCuboid
 from omni.kit.viewport.utility import get_viewport_from_window_name
 from isaacsim.sensors.camera import Camera
 from isaacsim.core.api import World
+from isaacsim.core.prims import XFormPrim
 from isaacsim.core.api.robots import Robot
 from isaacsim.storage.native import get_assets_root_path
 from isaacsim.core.utils.stage import add_reference_to_stage
 import isaacsim.core.utils.numpy.rotations as rot_utils
+
+# These are the [X_min, X_max], [Y_min, Y_max], [Z_min, Z_max] coordinates
+# in Isaac Sim's world frame where you want the robot to operate.
+# Adjust these values to fit your table setup.
+ROBOT_WORKSPACE = {
+    "x": [-0.5, 0.5],  # Forward/back
+    "y": [-0.5, 0.5], # Left/right
+    "z": [0.0, 0.5]  # Down/up (0.45 is just above the table)
+}
 
 def main():
     print("🚀 Isaac Sim 5.0 + VLA Integration (IK Verified)")
@@ -34,14 +44,6 @@ def main():
     # 1. Create World
     my_world = World(stage_units_in_meters=1.0)
     
-    # 2. Add ground plane
-    try:
-        usd_path = get_assets_root_path() + "/Isaac/Environments/Grid/default_environment.usd"
-        add_reference_to_stage(usd_path=usd_path, prim_path="/ground_plane")
-        print("✅ Ground plane added")
-    except Exception as e:
-        print(f"⚠️ Ground plane failed: {e}")
-    
     # 3. Add robot
     robot = None
     try:
@@ -51,18 +53,38 @@ def main():
         # Create robot object for control
         robot = Robot(prim_path="/World/UR5", name="ur5_robot")
         my_world.scene.add(robot)
+        robot.set_local_pose(orientation=rot_utils.euler_angles_to_quats(np.array([0,0,90]), degrees=True))
         print("✅ UR5 robot loaded and added to scene")
     except Exception as e:
         print(f"⚠️ Robot loading failed: {e}")
         robot = None
     
-    # 4. Clean scene with just robot
-    print("✅ Clean scene (no blocks)")
+    # 4. Add a simple room with table and red block
+    try:
+        room_path = get_assets_root_path() + "/Isaac/Environments/Simple_Room/simple_room.usd"
+        add_reference_to_stage(usd_path=room_path, prim_path="/World/Room")
+        print("✅ Room and table added")
+    except Exception as e:
+        print(f"⚠️ Room loading failed: {e}")
+    
+    try:
+        red_block = DynamicCuboid(
+            prim_path="/World/RedBlock",
+            name="red_block",
+            position=np.array([0.0, -0.5, 0.4]),
+            scale=np.array([0.05, 0.05, 0.05]),
+            color=np.array([1.0, 0.0, 0.0]),
+            mass=0.1
+        )
+        my_world.scene.add(red_block)
+        print("✅ Red block added on table")
+    except Exception as e:  
+        print(f"⚠️ Red block failed: {e}")
     
     # 5. Create camera
     camera = Camera(
         prim_path="/World/Camera",
-        position=np.array([0.0, -2.0, 2.0]),
+        position=np.array([0.0, -2.0, 1.6]),
         name="camera",
         frequency=20,
         resolution=(512, 512)
@@ -111,7 +133,7 @@ def main():
             robot.set_solver_position_iteration_count(64)
             robot.set_solver_velocity_iteration_count(64)
             
-            home_joints = [0, -1.57, 1.57, -1.57, -1.57, 0]  # UR5 home position
+            home_joints = [0, -1.57, -1.57, -1.57, 1.57, 0]  # UR5 home position
             robot.set_joint_positions(home_joints)
             
             # Set joint stiffness to fight gravity
@@ -152,58 +174,22 @@ def main():
                         
                         save_image(rgb_image, output_dir, capture_count)
                         
-                        # HYBRID TESTING: Manual first, then VLA
-                        if capture_count <= 10:
-                            # Manual testing for first 10 captures to verify baseline
-                            print(f"🧪 MANUAL TEST - Capture {capture_count}")
-                            
-                            test_positions = [
-                                ([0.3, 0.0, 0.8], "High Up"),
-                                ([0.5, 0.0, 0.5], "Forward"),  
-                                ([0.3, 0.3, 0.4], "Right Side"),
-                                ([0.3, -0.3, 0.4], "Left Side"),
-                                ([0.2, 0.0, 0.2], "Low"),
-                            ]
-                            
-                            pos_idx = capture_count % len(test_positions)
-                            target_pos, description = test_positions[pos_idx]
-                            
-                            print(f"🎯 Manual Target: {description} -> {target_pos}")
-                            
-                            manual_action = {
-                                "position": target_pos,
-                                "rotation": [0, 0, 0],
-                                "gripper": 0.5
-                            }
-                            
-                            apply_vla_action_to_robot(robot, manual_action)
+                        # VLA testing - STICK with one prompt for multiple frames
+                        print(f"🤖 VLA TEST - Capture {capture_count}")
                         
+                        # Use same prompt for 20 frames, then switch
+                        frames_per_prompt = 20
+                        current_prompt = "pick up the red cube"
+                        
+                        frames_into_current_prompt = (capture_count - 11) % frames_per_prompt + 1
+                        
+                        print(f"📝 VLA Prompt: '{current_prompt}' (frame {frames_into_current_prompt}/{frames_per_prompt})")
+                        
+                        vla_action = send_to_vla(rgb_image, current_prompt)
+                        if vla_action is not None and robot is not None:
+                            apply_vla_action_to_robot(robot, vla_action)
                         else:
-                            # VLA testing - STICK with one prompt for multiple frames
-                            print(f"🤖 VLA TEST - Capture {capture_count}")
-                            
-                            vla_prompts = [
-                                "extend the robot arm upwards",
-                                "move the robot arm to the right", 
-                                "reach forward with the robot arm",
-                                "move the robot arm down to the table",
-                                "move the robot arm to the left",
-                            ]
-                            
-                            # Use same prompt for 20 frames, then switch
-                            frames_per_prompt = 20
-                            prompt_idx = ((capture_count - 11) // frames_per_prompt) % len(vla_prompts)
-                            current_prompt = vla_prompts[prompt_idx]
-                            
-                            frames_into_current_prompt = (capture_count - 11) % frames_per_prompt + 1
-                            
-                            print(f"📝 VLA Prompt: '{current_prompt}' (frame {frames_into_current_prompt}/{frames_per_prompt})")
-                            
-                            vla_action = send_to_vla(rgb_image, current_prompt)
-                            if vla_action is not None and robot is not None:
-                                apply_vla_action_to_robot(robot, vla_action)
-                            else:
-                                print("❌ VLA failed - skipping this frame")
+                            print("❌ VLA failed - skipping this frame")
                         
                     else:
                         print("⚠️ No camera data")
@@ -252,7 +238,7 @@ def save_image(image, output_dir, capture_count):
         vla_filename = f"isaac_sim_{capture_count:04d}_{timestamp}_vla_256x256.png"
         vla_filepath = os.path.join(output_dir, vla_filename)
         
-        vla_image = pil_image.resize((256, 256))
+        vla_image = pil_image.resize((224, 224))
         vla_image.save(vla_filepath)
         
         print(f"💾 Saved VLA version: {vla_filename}")
@@ -385,58 +371,81 @@ def simple_ur5_ik(target_pos, current_joints=None):
     return joint_angles
 
 def apply_vla_action_to_robot(robot, vla_action):
-    """Apply VLA action to robot joints."""
+    """
+    Get current EE pose, apply VLA delta, un-normalize to workspace, and command robot.
+    """
     try:
         if not robot:
             print("❌ No robot available")
             return
+
+        # --- STEP 1: Get the robot's current end-effector pose ---
+        # Using the CORRECT path you discovered!
+        ee_prim_path = "/World/UR5/wrist_3_link" 
+        
+        # Correctly initialize the XFormPrim
+        ee_prim = XFormPrim(ee_prim_path)
+        
+        # CORRECT API CALL: Use get_world_poses() and take the first element
+        positions, orientations = ee_prim.get_world_poses()
+        
+        # Check if the returned arrays are valid and not empty
+        if positions is None or len(positions) == 0:
+            print("⚠️ Could not get current end-effector pose. Aborting action.")
+            return
             
-        # Get current joint positions
+        current_pos = positions[0]
+        current_rot_quat = orientations[0]
+        
+        # --- STEP 2: Get the normalized action delta from VLA ---
+        norm_pos_delta = vla_action["position"]
+        
+        # --- STEP 3: Coordinate System Transformation & Scaling ---
+        ACTION_SCALE = 0.1 
+        
+        isaac_pos_delta = np.array([
+            norm_pos_delta[1] * ACTION_SCALE,    # VLA Y -> Isaac X
+            -norm_pos_delta[0] * ACTION_SCALE,   # VLA X -> Isaac -Y
+            norm_pos_delta[2] * ACTION_SCALE     # VLA Z -> Isaac Z
+        ])
+
+        # --- STEP 4: Calculate the new target position ---
+        new_target_pos = current_pos + isaac_pos_delta
+
+        # --- STEP 5: Clamp the target to the defined workspace ---
+        clamped_target_pos = np.array([
+            np.clip(new_target_pos[0], ROBOT_WORKSPACE["x"][0], ROBOT_WORKSPACE["x"][1]),
+            np.clip(new_target_pos[1], ROBOT_WORKSPACE["y"][0], ROBOT_WORKSPACE["y"][1]),
+            np.clip(new_target_pos[2], ROBOT_WORKSPACE["z"][0], ROBOT_WORKSPACE["z"][1])
+        ])
+
+        print(f"🦾 Current EE Pos: ({current_pos[0]:.2f}, {current_pos[1]:.2f}, {current_pos[2]:.2f})")
+        print(f"🤖 VLA Delta (X,Y,Z): ({norm_pos_delta[0]:.2f}, {norm_pos_delta[1]:.2f}, {norm_pos_delta[2]:.2f})")
+        print(f"🌍 World Target: ({clamped_target_pos[0]:.3f}, {clamped_target_pos[1]:.3f}, {clamped_target_pos[2]:.3f})")
+
+        # --- STEP 6: Compute IK and command the robot ---
         current_joints = robot.get_joint_positions()
         if current_joints is None:
-            current_joints = [0, -1.57, 1.57, -1.57, -1.57, 0]  # Default home
+            current_joints = [0, -1.57, 1.57, -1.57, -1.57, 0]
+
+        target_joints = simple_ur5_ik(clamped_target_pos, current_joints)
         
-        # Convert VLA action to target position
-        target_pos = vla_action["position"]
-        
-        # Apply simple scaling/offset to VLA outputs for UR5 workspace
-        # VLA outputs are often in a different coordinate frame
-        scaled_pos = [
-            target_pos[0] * 0.5 + 0.3,  # Scale and offset X
-            target_pos[1] * 0.5,        # Scale Y  
-            target_pos[2] * 0.3 + 0.3   # Scale and offset Z
-        ]
-        
-        print(f"🦾 Target position: ({scaled_pos[0]:.3f}, {scaled_pos[1]:.3f}, {scaled_pos[2]:.3f})")
-        
-        # Compute inverse kinematics
-        target_joints = simple_ur5_ik(scaled_pos, current_joints)
-        
-        # Apply joint limits (UR5 limits in radians)
         joint_limits = [
-            [-2*np.pi, 2*np.pi],  # Base
-            [-np.pi, np.pi],      # Shoulder
-            [-np.pi, np.pi],      # Elbow
-            [-2*np.pi, 2*np.pi],  # Wrist1
-            [-2*np.pi, 2*np.pi],  # Wrist2
-            [-2*np.pi, 2*np.pi]   # Wrist3
+            [-2*np.pi, 2*np.pi], [-np.pi, np.pi], [-np.pi, np.pi],
+            [-2*np.pi, 2*np.pi], [-2*np.pi, 2*np.pi], [-2*np.pi, 2*np.pi]
         ]
-        
         for i in range(len(target_joints)):
             target_joints[i] = np.clip(target_joints[i], joint_limits[i][0], joint_limits[i][1])
         
-        # Apply smooth interpolation to avoid jerky motion
-        alpha = 0.1  # Interpolation factor (0.1 = slow, 1.0 = instant)
+        alpha = 0.3
         smooth_joints = []
         for i in range(len(current_joints)):
             smooth_joint = current_joints[i] + alpha * (target_joints[i] - current_joints[i])
             smooth_joints.append(smooth_joint)
         
-        # Set robot joint positions
         robot.set_joint_positions(smooth_joints)
-        
         print(f"🎯 Applied joints: {[f'{j:.2f}' for j in smooth_joints]}")
-        
+
     except Exception as e:
         print(f"❌ Robot control error: {e}")
         import traceback
