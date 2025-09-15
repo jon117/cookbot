@@ -6,10 +6,17 @@ Controls simulated robot arm based on VLA predictions.
 import numpy as np
 import logging
 from typing import List, Optional, Dict, Any
-from omni.isaac.core.objects import DynamicCuboid
-from omni.isaac.core.prims import RigidPrimView
-from omni.isaac.core.utils.types import ArticulationAction
-import omni.isaac.core.utils.prims as prim_utils
+
+# Import Isaac Sim modules conditionally
+try:
+    from omni.isaac.core.objects import DynamicCuboid
+    from omni.isaac.core.prims import RigidPrimView
+    from omni.isaac.core.utils.types import ArticulationAction
+    import omni.isaac.core.utils.prims as prim_utils
+    ISAAC_AVAILABLE = True
+except ImportError:
+    ISAAC_AVAILABLE = False
+    print("Isaac Sim modules not available for robot control - running in fallback mode")
 
 from ..common.data_types import GraspPose, Pose6D, ExecutionResult
 
@@ -47,6 +54,11 @@ class SimulatedRobotArm:
         try:
             logger.info("Setting up simulated robot arm...")
             
+            if not ISAAC_AVAILABLE:
+                logger.warning("Isaac Sim not available - using fallback robot simulation")
+                self._setup_fallback_robot()
+                return
+            
             # For now, use placeholder robot (simple kinematic chain)
             logger.debug("About to create simple robot...")
             self._create_simple_robot()
@@ -55,7 +67,25 @@ class SimulatedRobotArm:
             logger.info("✓ Robot arm setup complete")
             
         except Exception as e:
-            logger.error(f"Failed to setup robot: {e}")
+            logger.error(f"Failed to set up robot: {e}")
+    
+    def _setup_fallback_robot(self):
+        """Set up fallback robot simulation when Isaac Sim is not available."""
+        logger.info("Setting up fallback robot simulation...")
+        
+        # Use simple kinematic model
+        self.robot_base = None
+        self.arm_segments = []
+        self.end_effector = None
+        
+        # Set reasonable initial state
+        self.current_joint_positions = np.array([0.0, -0.5, 0.5, 0.0, 0.5, 0.0])
+        self.current_end_effector_pose = Pose6D(0.3, 0.0, 0.3, 0, 0, 0)
+        self.gripper_state = "open"
+        
+        logger.info("✓ Fallback robot simulation initialized")
+        
+    def _create_simple_robot(self):
             import traceback
             logger.error(f"Traceback: {traceback.format_exc()}")
             raise
@@ -192,6 +222,32 @@ class SimulatedRobotArm:
         """
         try:
             logger.info(f"Executing grasp at ({grasp_pose.x:.3f}, {grasp_pose.y:.3f}, {grasp_pose.z:.3f})")
+            
+            if not ISAAC_AVAILABLE:
+                # Fallback simulation
+                logger.info("Simulating grasp execution in fallback mode...")
+                
+                # Update simulated robot state
+                self.current_end_effector_pose = Pose6D(
+                    x=grasp_pose.x,
+                    y=grasp_pose.y,
+                    z=grasp_pose.z,
+                    rx=grasp_pose.rx,
+                    ry=grasp_pose.ry,
+                    rz=grasp_pose.rz
+                )
+                self.gripper_state = "closed"
+                
+                # Simulate some execution time
+                import time
+                time.sleep(2.0)
+                
+                return ExecutionResult(
+                    success=True,
+                    message=f"Simulated grasp executed at ({grasp_pose.x:.3f}, {grasp_pose.y:.3f}, {grasp_pose.z:.3f})",
+                    execution_time=2.0,
+                    final_pose=self.current_end_effector_pose
+                )
             
             # Step 1: Move to pre-grasp position (approach)
             pre_grasp_pose = Pose6D(

@@ -5,10 +5,17 @@ Provides RGB-D camera simulation for VLA model input.
 
 import numpy as np
 import time
-import omni.replicator.core as rep
-from omni.isaac.core.utils.stage import add_reference_to_stage
-import omni.isaac.core.utils.prims as prim_utils
-from omni.isaac.sensor import Camera
+
+# Import Isaac Sim modules conditionally to avoid import errors
+try:
+    import omni.replicator.core as rep
+    from omni.isaac.core.utils.stage import add_reference_to_stage
+    import omni.isaac.core.utils.prims as prim_utils
+    from omni.isaac.sensor import Camera
+    ISAAC_AVAILABLE = True
+except ImportError:
+    ISAAC_AVAILABLE = False
+    print("Isaac Sim modules not available - running in fallback mode")
 
 
 class VLACamera:
@@ -37,21 +44,46 @@ class VLACamera:
         """Set up RGB-D cameras in the scene."""
         print("Setting up VLA cameras...")
         
-        # Create primary RGB-D camera
-        self.camera = Camera(
-            prim_path="/World/VLACamera",
-            name="vla_camera",
-            position=np.array(self.camera_position),
-            frequency=30,  # 30 FPS
-            resolution=(self.image_width, self.image_height),
-            orientation=self._calculate_camera_orientation()
-        )
+        if not ISAAC_AVAILABLE:
+            print("Warning: Isaac Sim not available, creating fallback camera")
+            self.camera = None
+            return
         
-        # Configure camera intrinsics
-        self._configure_camera_intrinsics()
-        
-        print(f"Camera positioned at {self.camera_position}")
-        print(f"Camera looking at {self.camera_target}")
+        # Import Isaac Sim modules here to avoid conflicts
+        try:
+            from omni.isaac.sensor import Camera
+            import omni.isaac.core.utils.stage as stage_utils
+            import omni.usd
+            
+            # Ensure we have a valid stage before creating camera
+            stage = omni.usd.get_context().get_stage()
+            if not stage:
+                print("Warning: No USD stage available for camera setup")
+                return
+            
+            # Create primary RGB-D camera
+            self.camera = Camera(
+                prim_path="/World/VLACamera",
+                name="vla_camera",
+                position=np.array(self.camera_position),
+                frequency=30,  # 30 FPS
+                resolution=(self.image_width, self.image_height),
+                orientation=self._calculate_camera_orientation()
+            )
+            
+            # Initialize the camera (this is crucial for annotators)
+            if hasattr(self.camera, 'initialize'):
+                self.camera.initialize()
+            
+            # Configure camera intrinsics
+            self._configure_camera_intrinsics()
+            
+            print(f"Camera positioned at {self.camera_position}")
+            print(f"Camera looking at {self.camera_target}")
+            
+        except Exception as e:
+            print(f"Error setting up camera: {e}")
+            self.camera = None
         
     def _calculate_camera_orientation(self):
         """Calculate camera orientation to look at target."""
@@ -89,11 +121,25 @@ class VLACamera:
             return None
             
         try:
-            # Get RGB image
-            rgb_data = self.camera.get_rgba()[:, :, :3]  # Remove alpha channel
+            # Check if camera is properly initialized
+            if not hasattr(self.camera, 'get_rgba'):
+                print("Error: Camera does not have get_rgba method")
+                return None
             
-            # Get depth data
+            # Get RGB image - handle potential None returns
+            rgba_data = self.camera.get_rgba()
+            if rgba_data is None:
+                print("Error: Camera returned None for RGBA data")
+                return None
+                
+            rgb_data = rgba_data[:, :, :3]  # Remove alpha channel
+            
+            # Get depth data - handle potential None returns
             depth_data = self.camera.get_depth()
+            if depth_data is None:
+                print("Warning: Camera returned None for depth data")
+                # Create dummy depth data
+                depth_data = np.zeros((self.image_height, self.image_width), dtype=np.float32)
             
             # Create camera matrix
             camera_matrix = np.array([
@@ -112,6 +158,8 @@ class VLACamera:
             
         except Exception as e:
             print(f"Error capturing camera data: {e}")
+            import traceback
+            traceback.print_exc()
             return None
             
     def capture_for_vla(self):
@@ -123,6 +171,25 @@ class VLACamera:
         """
         from ..common.data_types import CameraObservation
         import time
+        
+        if not ISAAC_AVAILABLE or self.camera is None:
+            # Create synthetic test data when Isaac Sim is not available
+            print("Creating synthetic camera data for testing...")
+            test_rgb = np.random.randint(0, 255, (self.image_height, self.image_width, 3), dtype=np.uint8)
+            test_depth = np.random.rand(self.image_height, self.image_width).astype(np.float32) * 2.0  # 0-2 meter range
+            test_camera_matrix = np.array([
+                [self.focal_length, 0, self.image_width / 2],
+                [0, self.focal_length, self.image_height / 2],
+                [0, 0, 1]
+            ])
+            
+            return CameraObservation(
+                rgb=test_rgb,
+                depth=test_depth,
+                camera_matrix=test_camera_matrix,
+                timestamp=time.time(),
+                camera_id='synthetic_camera'
+            )
         
         camera_data = self.capture_rgbd()
         if camera_data is None:

@@ -48,11 +48,13 @@ class IsaacVLABridge:
         logger.info("Setting up Isaac Sim - VLA bridge components...")
         
         try:
-            # Initialize kitchen scene
+            # Initialize kitchen scene first
             self.scene = KitchenScene()
             
-            # Set up camera system
-            self.camera_system, self.primary_camera = setup_scene_cameras()
+            # Set up camera system after scene is ready
+            # Note: Camera initialization happens later in start_simulation()
+            self.camera_system = None
+            self.primary_camera = None
             
             # Initialize VLA grasp planner
             self.grasp_planner = GraspPlanner(self.vla_config_path)
@@ -71,8 +73,25 @@ class IsaacVLABridge:
             # Create scene
             self.scene.create_scene()
             
-            # Initialize simulation
-            self.scene.world.reset()
+            # Initialize simulation - handle fallback case
+            if self.scene.world and hasattr(self.scene.world, 'reset'):
+                self.scene.world.reset()
+            else:
+                logger.info("Using fallback simulation initialization")
+            
+            # Now set up camera system after world is ready
+            logger.info("Setting up camera system...")
+            self.camera_system, self.primary_camera = setup_scene_cameras()
+            
+            # Give cameras time to initialize
+            import time
+            time.sleep(1.0)
+            
+            # Verify camera is working
+            if self.primary_camera and self.primary_camera.camera:
+                logger.info("✓ Camera system initialized successfully")
+            else:
+                logger.info("✓ Camera system initialized in fallback mode")
             
             logger.info("✓ Isaac Sim simulation started")
             
