@@ -57,18 +57,36 @@ class KitchenScene:
     """Kitchen scene setup with robot arm, table, and objects."""
     
     def __init__(self):
+        self.fallback_mode = False
+        self.scene_objects = {}
+        
         try:
-            self.world = World(stage_units_in_meters=1.0)
-            # Try to get stage, handle fallback
+            # Check if we're running in Isaac Sim environment
             if hasattr(omni, 'usd'):
+                print("Isaac Sim USD context detected - creating world...")
+                self.world = World(stage_units_in_meters=1.0)
                 self.stage = omni.usd.get_context().get_stage()
+                
+                # Verify world was created successfully
+                if self.world is None:
+                    print("World creation failed, falling back to fallback mode")
+                    self._create_fallback_world()
+                else:
+                    print("Isaac Sim world created successfully")
+                    
             else:
                 print("Isaac Sim USD context not available - using fallback mode")
-                self.stage = None
+                self._create_fallback_world()
+                
         except Exception as e:
             print(f"Isaac Sim World not available - using fallback mode: {e}")
-            self.world = None
-            self.stage = None
+            self._create_fallback_world()
+            
+    def _create_fallback_world(self):
+        """Initialize fallback world state."""
+        self.world = None
+        self.stage = None
+        self.fallback_mode = True
         
     def create_scene(self):
         """Create the complete kitchen scene."""
@@ -102,19 +120,19 @@ class KitchenScene:
             self._create_fallback_scene()
     
     def _create_fallback_scene(self):
-        """Create a fallback scene when Isaac Sim is not available."""
-        print("Setting up fallback kitchen scene...")
+        """Create a fallback scene when Isaac Sim components are unavailable."""
+        print("Creating fallback scene - Isaac Sim components not available")
         
-        # Just store some basic scene information
-        self.objects = {
-            'table': {'position': [0.4, 0.0, 0.0], 'size': [0.8, 0.6, 0.02]},
-            'carrot': {'position': [0.3, 0.1, 0.05], 'size': [0.02, 0.02, 0.08]},
-            'slicer': {'position': [0.5, -0.2, 0.02], 'size': [0.15, 0.15, 0.1]}
+        # Create a minimal scene representation
+        self.scene_objects = {
+            "table": {"position": [0.0, 0.0, 0.0], "size": [1.0, 1.0, 0.05]},
+            "stove": {"position": [0.5, 0.0, 0.5], "size": [0.4, 0.4, 0.1]},
+            "carrots": {"position": [0.2, 0.2, 0.1], "size": [0.05, 0.05, 0.1]}
         }
         
-        print("Fallback scene created with simulated objects:")
-        for obj_name, obj_info in self.objects.items():
-            print(f"  - {obj_name}: {obj_info['position']}")
+        # Initialize world as None to indicate fallback mode
+        self.world = None
+        self.fallback_mode = True
     
     def _create_table(self):
         """Create kitchen table."""
@@ -221,12 +239,30 @@ class KitchenScene:
     def step(self):
         """Step simulation."""
         try:
-            if self.world:
-                self.world.step(render=True)
-            else:
-                # Fallback: just simulate time passing
+            if self.fallback_mode:
+                # In fallback mode, just simulate time passing
                 import time
                 time.sleep(0.016)  # ~60 FPS
+                return
+                
+            if self.world and hasattr(self.world, 'step'):
+                self.world.step(render=True)
+            else:
+                # Fallback: try using the physics context directly
+                try:
+                    import omni.physx
+                    physx_interface = omni.physx.get_physx_interface()
+                    if physx_interface:
+                        # Step physics simulation
+                        physx_interface.update_simulation(1.0/60.0, 1.0/60.0)  # 60 FPS
+                    else:
+                        # Last resort: just simulate time passing
+                        import time
+                        time.sleep(0.016)  # ~60 FPS
+                except:
+                    # Fallback: just simulate time passing
+                    import time
+                    time.sleep(0.016)  # ~60 FPS
         except Exception as e:
             print(f"Error stepping simulation: {e}")
             # Fallback: just simulate time passing

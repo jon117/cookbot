@@ -126,20 +126,50 @@ class VLACamera:
                 print("Error: Camera does not have get_rgba method")
                 return None
             
-            # Get RGB image - handle potential None returns
+            # Get RGB image - handle potential None returns and various formats
             rgba_data = self.camera.get_rgba()
             if rgba_data is None:
                 print("Error: Camera returned None for RGBA data")
                 return None
-                
-            rgb_data = rgba_data[:, :, :3]  # Remove alpha channel
+            
+            # Handle different array formats that Isaac Sim might return
+            if rgba_data.ndim == 1:
+                # If 1D array, try to reshape it
+                expected_size = self.image_height * self.image_width * 4  # RGBA
+                if rgba_data.size == expected_size:
+                    rgba_data = rgba_data.reshape(self.image_height, self.image_width, 4)
+                else:
+                    print(f"Error: Unexpected 1D array size: {rgba_data.size}, expected: {expected_size}")
+                    return None
+            elif rgba_data.ndim == 2:
+                # If 2D array, might need to add channel dimension
+                print(f"Warning: Got 2D RGBA array with shape {rgba_data.shape}")
+                return None
+            elif rgba_data.ndim != 3:
+                print(f"Error: Unexpected RGBA array dimensions: {rgba_data.ndim}")
+                return None
+            
+            # Extract RGB channels (remove alpha)
+            if rgba_data.shape[2] >= 3:
+                rgb_data = rgba_data[:, :, :3]
+            else:
+                print(f"Error: RGBA data doesn't have enough channels: {rgba_data.shape}")
+                return None
             
             # Get depth data - handle potential None returns
             depth_data = self.camera.get_depth()
             if depth_data is None:
-                print("Warning: Camera returned None for depth data")
+                print("Warning: Camera returned None for depth data, creating dummy depth")
                 # Create dummy depth data
-                depth_data = np.zeros((self.image_height, self.image_width), dtype=np.float32)
+                depth_data = np.ones((self.image_height, self.image_width), dtype=np.float32) * 1.0
+            elif depth_data.ndim == 1:
+                # Reshape 1D depth data if needed
+                expected_depth_size = self.image_height * self.image_width
+                if depth_data.size == expected_depth_size:
+                    depth_data = depth_data.reshape(self.image_height, self.image_width)
+                else:
+                    print(f"Warning: Unexpected depth array size: {depth_data.size}")
+                    depth_data = np.ones((self.image_height, self.image_width), dtype=np.float32) * 1.0
             
             # Create camera matrix
             camera_matrix = np.array([
