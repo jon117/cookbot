@@ -112,7 +112,24 @@ class IsaacVLABridge:
                            instruction: str,
                            target_object: str = "carrot") -> Optional[GraspPose]:
         """
-        Use VLA model to predict manipulation action.
+        Use VLA model to predict manipulation action (async version).
+        
+        Args:
+            camera_data: Current scene observation
+            instruction: Task instruction
+            target_object: Object to manipulate
+            
+        Returns:
+            Predicted grasp pose
+        """
+        return self.predict_action_sync(camera_data, instruction, target_object)
+    
+    def predict_action_sync(self, 
+                           camera_data: CameraObservation, 
+                           instruction: str,
+                           target_object: str = "carrot") -> Optional[GraspPose]:
+        """
+        Use VLA model to predict manipulation action (synchronous version).
         
         Args:
             camera_data: Current scene observation
