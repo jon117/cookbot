@@ -1,77 +1,47 @@
-# Cookbot Scripts
+## Overview
 
-This directory contains the main scripts for running the cookbot system.
+Jetsons style cooking robot
 
-## Main Scripts
+Simple test of the openVLA model with Isaac Sim 5.0
 
-### 🎮 `demo.py`
-**The main entry point for testing the system**
-```bash
-python scripts/demo.py
-```
-- Tests the complete pipeline without requiring Isaac Sim
-- Validates OpenVLA integration
-- Shows expected robot actions
-- **Run this first** to verify your setup
 
-### 🚀 `start_isaac_sim.sh`
-**Launches Isaac Sim with cookbot setup**
-```bash
-./scripts/start_isaac_sim.sh
-```
-- Checks OpenVLA server connection
-- Starts Isaac Sim
-- Provides instructions for running the demo
+## VS Code Installation for intellisense
 
-### 🏃 `run_isaac_vla_demo.py`
-**Full Isaac Sim + OpenVLA demo (run inside Isaac Sim)**
-```python
-# In Isaac Sim Python console:
-exec(open('scripts/run_isaac_vla_demo.py').read())
-```
-- Creates kitchen scene with robot and objects
-- Connects to OpenVLA for action prediction
-- Executes robot manipulation tasks
+https://docs.isaacsim.omniverse.nvidia.com/5.0.0/installation/install_python.html
 
-## Quick Start
 
-1. **Test the system**:
-   ```bash
-   python scripts/demo.py
-   ```
-
-2. **Run with Isaac Sim**:
-   ```bash
-   ./scripts/start_isaac_sim.sh
-   # Then in Isaac Sim console:
-   exec(open('scripts/run_isaac_vla_demo.py').read())
-   ```
-
-## Requirements
-
-- Isaac Sim installed at `~/isaacsim/`
-- OpenVLA server running at `http://0.0.0.0:8000/act`
-- Python packages: `numpy`, `requests`, `json-numpy`, `Pillow`
-
-## Directory Structure
+### 1. Install Miniconda
+https://www.anaconda.com/docs/getting-started/miniconda/install#linux-2
 
 ```
-scripts/
-├── demo.py                 # Main demo (no Isaac Sim required)
-├── start_isaac_sim.sh      # Isaac Sim launcher
-├── run_isaac_vla_demo.py   # Full Isaac Sim demo
-├── deployment/             # Deployment scripts
-├── development/            # Development utilities
-├── setup/                  # Installation scripts
-└── utilities/              # Helper scripts
+mkdir -p ~/miniconda3
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda3/miniconda.sh
+bash ~/miniconda3/miniconda.sh -b -u -p ~/miniconda3
+rm ~/miniconda3/miniconda.sh
 ```
 
-## Workflow
+### 2. install isaacsim 5.0
 
-The typical workflow is:
+```
+conda create -n cookbot python=3.11 -y
+conda activate cookbot
+pip install isaacsim[all,extscache]==5.0.0 --extra-index-url https://pypi.nvidia.com
+pip install -r requirements.txt
+```
 
-1. **`demo.py`** - Test that OpenVLA integration works
-2. **`start_isaac_sim.sh`** - Launch Isaac Sim
-3. **`run_isaac_vla_demo.py`** - Run the full demo in Isaac Sim
+### 3. initialize isaacsim
 
-This gives you a complete pipeline from simulation to robot control with OpenVLA! 🤖
+From the terminal, run:
+```
+isaacsim
+```
+Then WAIT. It does a lot of stuff on inital startup. If you cancel this early you will break the isaacsim install and have to reinstall it. IDK what it's doing, but it takes a while and it's important.
+
+### 4. setup vscode
+
+```
+python -m isaacsim --generate-vscode-settings
+```
+
+Now you should have intellisense in vscode.
+
