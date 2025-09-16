@@ -1,5 +1,0 @@
-# Isaac Sim and simulation
--r base.txt
-torch>=1.9.0
-torchvision>=0.10.0
-# Note: Isaac Sim installed separately
