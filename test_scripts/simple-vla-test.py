@@ -12,10 +12,10 @@ import os
 from datetime import datetime
 
 # Isaac Sim 5.0 API imports
+from isaacsim.core.api import World
 from isaacsim.core.api.objects import DynamicCuboid
 from omni.kit.viewport.utility import get_viewport_from_window_name
 from isaacsim.sensors.camera import Camera
-from isaacsim.core.api import World
 from isaacsim.core.prims import XFormPrim
 from isaacsim.core.api.robots import Robot
 from isaacsim.storage.native import get_assets_root_path
@@ -392,7 +392,7 @@ def apply_vla_action_to_robot(robot, vla_action):
         norm_pos_delta = vla_action["position"]
         
         # --- STEP 3: Coordinate System Transformation & Scaling ---
-        ACTION_SCALE = 0.1 
+        ACTION_SCALE = 0.01
         
         isaac_pos_delta = np.array([
             norm_pos_delta[1] * ACTION_SCALE,    # VLA Y -> Isaac X
