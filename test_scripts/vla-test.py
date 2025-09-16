@@ -37,9 +37,9 @@ from omni.isaac.core.prims import XFormPrim
 
 # Robot workspace constraints
 ROBOT_WORKSPACE = {
-    "x": [-5.5, 5.5],  # Forward/back
-    "y": [-5.5, 5.5], # Left/right
-    "z": [0.0, 5.5]  # Down/up
+    "x": [-0.5, 0.5],  # Forward/back
+    "y": [-0.5, 0.5], # Left/right
+    "z": [0.0, 0.5]  # Down/up
 }
 
 def save_image(image, output_dir, capture_count):
