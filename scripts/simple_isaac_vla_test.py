@@ -225,7 +225,7 @@ def save_image(image, output_dir, capture_count):
         
         # Create filename with timestamp
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"isaac_sim_{capture_count:04d}_{timestamp}.png"
+        filename = f"isaac_sim_{capture_count:04d}.png"
         filepath = os.path.join(output_dir, filename)
         
         # Save image
@@ -233,15 +233,6 @@ def save_image(image, output_dir, capture_count):
         pil_image.save(filepath)
         
         print(f"💾 Saved: {filename}")
-        
-        # Also save the VLA-sized version for debugging
-        vla_filename = f"isaac_sim_{capture_count:04d}_{timestamp}_vla_256x256.png"
-        vla_filepath = os.path.join(output_dir, vla_filename)
-        
-        vla_image = pil_image.resize((224, 224))
-        vla_image.save(vla_filepath)
-        
-        print(f"💾 Saved VLA version: {vla_filename}")
         
     except Exception as e:
         print(f"❌ Failed to save image: {e}")
@@ -255,7 +246,7 @@ def send_to_vla(image, instruction):
             image = (image * 255).astype(np.uint8)
         
         pil_image = PILImage.fromarray(image)
-        resized_image = pil_image.resize((256, 256))
+        resized_image = pil_image.resize((224, 224))
         vla_image = np.array(resized_image, dtype=np.uint8)
         
         print(f"🤖 → VLA: {instruction}")
