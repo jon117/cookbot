@@ -1,0 +1,62 @@
+{
+  "name": "Isaac Sim 5.0 Cookbot Development",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "runArgs": [
+    "--gpus=all",
+    "--network=host",
+    "-e", "DISPLAY=${localEnv:DISPLAY}",
+    "-e", "XAUTHORITY=${localEnv:XAUTHORITY}",
+    "-e", "OMNI_KIT_ALLOW_ROOT=1",
+    "-v", "/tmp/.X11-unix:/tmp/.X11-unix:rw",
+    "-v", "/dev/shm:/dev/shm:rw",
+    "--security-opt", "apparmor:unconfined",
+    "--cap-add=SYS_PTRACE",
+    "-e", "ACCEPT_EULA=Y",
+    "-e", "PRIVACY_CONSENT=N"
+  ],
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/workspace/cookbot,type=bind"
+  ],
+  "workspaceFolder": "/workspace/cookbot",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.pylint",
+        "ms-python.black-formatter",
+        "ms-vscode.cpptools",
+        "twxs.cmake",
+        "ms-vscode.cmake-tools",
+        "redhat.vscode-yaml"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/isaac-sim/python.sh",
+        "python.terminal.activateEnvInCurrentTerminal": false,
+        "python.analysis.extraPaths": [
+          "/isaac-sim/kit/python/lib/python3.10/site-packages",
+          "/isaac-sim/exts"
+        ],
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "files.watcherExclude": {
+          "**/docker/**": true,
+          "**/.git/**": true
+        }
+      }
+    }
+  },
+  "remoteUser": "root",
+  "forwardPorts": [8211, 8899],
+  "portsAttributes": {
+    "8211": {
+      "label": "Isaac Sim WebRTC",
+      "onAutoForward": "notify"
+    },
+    "8899": {
+      "label": "Isaac Sim Kit",
+      "onAutoForward": "ignore"
+    }
+  }
+}

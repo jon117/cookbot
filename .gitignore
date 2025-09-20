@@ -42,6 +42,7 @@ data/logs/
 data/recordings/
 data/calibration/
 !data/samples/  # Keep sample data
+docker/docker
 
 # Docker
 .docker/
